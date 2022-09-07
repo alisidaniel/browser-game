@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./SelectCharacter.css";
+import LoadingIndicator from "../../Components/LoadingIndicator";
 import { ethers } from "ethers";
 import { CONTRACT_ADDRESS, transformCharacterData } from "../../constants";
 import myEpicGame from "../../utils/MyEpicGame.json";
@@ -9,16 +10,27 @@ const SelectCharacter = ({ setCharacterNFT }) => {
 
   const [gameContract, setGameContract] = useState(null);
 
-  const mintCharacterNFTAction = async (characterId) => {
+  const [mintingCharacter, setMintingCharacter] = useState(false);
+
+  const mintCharacterNFTAction = (characterId) => async () => {
     try {
       if (gameContract) {
+        /*
+         * Show our loading indicator
+         */
+        setMintingCharacter(true);
         console.log("Minting character in progress...");
         const mintTxn = await gameContract.mintCharacterNFT(characterId);
         await mintTxn.wait();
-        console.log("mintTxn:", mintTxn);
+        console.log(mintTxn);
+        /*
+         * Hide our loading indicator when minting is finished
+         */
+        setMintingCharacter(false);
       }
     } catch (error) {
       console.warn("MintCharacterAction Error:", error);
+      setMintingCharacter(false);
     }
   };
 
@@ -82,17 +94,10 @@ const SelectCharacter = ({ setCharacterNFT }) => {
 
     if (gameContract) {
       getCharacters();
-
-      /*
-       * Setup NFT Minted Listener
-       */
       gameContract.on("CharacterNFTMinted", onCharacterMint);
     }
 
     return () => {
-      /*
-       * When your component unmounts, let;s make sure to clean up this listener
-       */
       if (gameContract) {
         gameContract.off("CharacterNFTMinted", onCharacterMint);
       }
@@ -117,9 +122,21 @@ const SelectCharacter = ({ setCharacterNFT }) => {
   return (
     <div className="select-character-container">
       <h2>Mint Your Hero. Choose wisely.</h2>
-      {/* Only show this when there are characters in state */}
       {characters.length > 0 && (
         <div className="character-grid">{renderCharacters()}</div>
+      )}
+      {/* Only show our loading state if mintingCharacter is true */}
+      {mintingCharacter && (
+        <div className="loading">
+          <div className="indicator">
+            <LoadingIndicator />
+            <p>Minting In Progress...</p>
+          </div>
+          <img
+            src="https://media2.giphy.com/media/61tYloUgq1eOk/giphy.gif?cid=ecf05e47dg95zbpabxhmhaksvoy8h526f96k4em0ndvx078s&rid=giphy.gif&ct=g"
+            alt="Minting loading indicator"
+          />
+        </div>
       )}
     </div>
   );
